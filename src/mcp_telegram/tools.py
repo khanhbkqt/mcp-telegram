@@ -230,7 +230,8 @@ async def get_messages_with_media(
                     message_contents.append(
                         ImageContent(
                             type="image",
-                            source=f"data:{mime_type};base64,{base64_data}"
+                            data=base64_data,
+                            mimeType=mime_type
                         )
                     )
                 
@@ -252,7 +253,8 @@ async def get_messages_with_media(
                         message_contents.append(
                             ImageContent(
                                 type="image",
-                                source=f"data:{mime_type};base64,{base64_data}"
+                                data=base64_data,
+                                mimeType=mime_type
                             )
                         )
                     else:
@@ -315,7 +317,8 @@ async def get_messages_with_media(
                             message_contents.append(
                                 ImageContent(
                                     type="image",
-                                    source=f"data:image/jpeg;base64,{base64_data}"
+                                    data=base64_data,
+                                    mimeType="image/jpeg"
                                 )
                             )
                     except Exception as e:
@@ -427,7 +430,8 @@ async def request_user_media(
                     response.append(
                         ImageContent(
                             type="image",
-                            source=f"data:{mime_type};base64,{base64_data}"
+                            data=base64_data,
+                            mimeType=mime_type
                         )
                     )
                     media_received += 1
@@ -451,7 +455,8 @@ async def request_user_media(
                         response.append(
                             ImageContent(
                                 type="image",
-                                source=f"data:{mime_type};base64,{base64_data}"
+                                data=base64_data,
+                                mimeType=mime_type
                             )
                         )
                     else:
@@ -515,7 +520,8 @@ async def request_user_media(
                             response.append(
                                 ImageContent(
                                     type="image",
-                                    source=f"data:image/jpeg;base64,{base64_data}"
+                                    data=base64_data,
+                                    mimeType="image/jpeg"
                                 )
                             )
                     except Exception as e:
