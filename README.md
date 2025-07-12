@@ -15,6 +15,12 @@
     - [Getting started](#getting-started)
     - [Debugging the server in terminal](#debugging-the-server-in-terminal)
     - [Debugging the server in the Inspector](#debugging-the-server-in-the-inspector)
+  - [Available Tools](#available-tools)
+    - [ListDialogs](#listdialogs)
+    - [ListMessages](#listmessages)
+    - [GetMessagesWithMedia](#getmessageswithmedia)
+    - [RequestUserMedia](#requestusermedia)
+    - [RequestUserPhotos](#requestuserphotos)
   - [Troubleshooting](#troubleshooting)
     - [Message 'Could not connect to MCP server mcp-telegram'](#message-could-not-connect-to-mcp-server-mcp-telegram)
 
@@ -36,13 +42,14 @@ The Model Context Protocol (MCP) is a system that lets AI apps, like Claude Desk
 
 ## What does this server do?
 
-As of not, the server provides read-only access to the Telegram API.
+The server provides access to the Telegram API, allowing users to:
 
 - [x] Get the list of dialogs (chats, channels, groups)
 - [x] Get the list of (unread) messages in the given dialog
+- [x] Retrieve messages with media (photos, videos, documents, audio)
+- [x] Request and receive media from users
 - [ ] Mark chanel as read
 - [ ] Retrieve messages by date and time
-- [ ] Download media files
 - [ ] Get the list of contacts
 - [ ] Draft a message
 - ...
@@ -50,6 +57,8 @@ As of not, the server provides read-only access to the Telegram API.
 ## Practical use cases
 
 - [x] Create a summary of the unread messages
+- [x] Analyze images and media shared in chats
+- [x] Request photos or documents from users and analyze them in real-time
 - [ ] Find contacts with upcoming birthdays and schedule a greeting
 - [ ] Find discussions on a given topic, summarize them and provide a list of links
 
@@ -119,12 +128,12 @@ Configure Claude Desktop to recognize the Exa MCP server.
 
 ### Telegram Configuration
 
-Before working with Telegram’s API, you need to get your own API ID and hash:
+Before working with Telegram's API, you need to get your own API ID and hash:
 
 1. Login to your Telegram account with the phone number of the developer account to use.
 1. Click under API Development tools.
 1. A 'Create new application' window will appear. Fill in your application details. There is no need to enter any URL, and only the first two fields (App title and Short name) can currently be changed later.
-1. Click on 'Create application' at the end. Remember that your API hash is secret and Telegram won’t let you revoke it. __Don’t post it anywhere!__
+1. Click on 'Create application' at the end. Remember that your API hash is secret and Telegram won't let you revoke it. __Don't post it anywhere!__
 
 ## Development
 
@@ -196,6 +205,86 @@ npx @modelcontextprotocol/inspector uv run mcp-telegram
 
 > [!WARNING]
 > Do not forget to define Environment Variables TELEGRAM_API_ID and TELEGRAM_API_HASH in the inspector.
+
+## Available Tools
+
+### ListDialogs
+
+Lists available dialogs, chats and channels. Useful for finding conversation IDs to use with other tools.
+
+**Parameters:**
+- `unread`: Boolean flag to show only dialogs with unread messages (default: false)
+- `archived`: Boolean flag to include archived dialogs (default: false)
+- `ignore_pinned`: Boolean flag to ignore pinned dialogs (default: false)
+
+**Example:**
+```bash
+uv run cli.py call-tool --name ListDialogs --arguments '{"unread": true}'
+```
+
+### ListMessages
+
+Lists messages in a given dialog, chat or channel, from newest to oldest.
+
+**Parameters:**
+- `dialog_id`: ID of the dialog to retrieve messages from
+- `unread`: Boolean flag to show only unread messages (default: false)
+- `limit`: Maximum number of messages to retrieve (default: 100)
+
+**Example:**
+```bash
+uv run cli.py call-tool --name ListMessages --arguments '{"dialog_id": 123456789, "limit": 10}'
+```
+
+### GetMessagesWithMedia
+
+Retrieves messages containing media (photos, videos, documents, audio) from a given dialog.
+
+**Parameters:**
+- `dialog_id`: ID of the dialog to retrieve media from
+- `limit`: Maximum number of messages to check for media (default: 20)
+- `include_documents`: Boolean flag to include document media (default: true)
+- `include_videos`: Boolean flag to include video media (default: true)
+- `include_audio`: Boolean flag to include audio media (default: true)
+
+**Example:**
+```bash
+uv run cli.py call-tool --name GetMessagesWithMedia --arguments '{"dialog_id": 123456789, "limit": 5}'
+```
+
+### RequestUserMedia
+
+Sends a message to a chat requesting media and waits for the user's response.
+
+**Parameters:**
+- `dialog_id`: ID of the dialog to send the request to
+- `message`: Message text to send to the user requesting media
+- `accept_photos`: Boolean flag to accept photos (default: true)
+- `accept_documents`: Boolean flag to accept documents (default: true)
+- `accept_videos`: Boolean flag to accept videos (default: true)
+- `accept_audio`: Boolean flag to accept audio (default: true)
+- `timeout`: Maximum seconds to wait for a response (default: 60)
+- `max_media`: Maximum number of media items to collect (default: 5)
+
+**Example:**
+```bash
+uv run cli.py call-tool --name RequestUserMedia --arguments '{"dialog_id": 123456789, "message": "Please send me some photos or documents", "timeout": 120}'
+```
+
+### RequestUserPhotos
+
+Legacy tool that requests only photos from a user (maintained for backward compatibility).
+
+**Parameters:**
+- `dialog_id`: ID of the dialog to send the request to
+- `message`: Message text to send to the user requesting photos
+- `timeout`: Maximum seconds to wait for a response (default: 60)
+- `max_photos`: Maximum number of photos to collect (default: 5)
+
+**Example:**
+```bash
+uv run cli.py call-tool --name RequestUserPhotos --arguments '{"dialog_id": 123456789, "message": "Please send me some photos", "timeout": 90}'
+```
 
 ## Troubleshooting
 
