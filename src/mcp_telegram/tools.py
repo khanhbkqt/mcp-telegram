@@ -10,10 +10,12 @@ from functools import singledispatch
 
 from mcp.types import (
     EmbeddedResource,
-    ImageContent,
     TextContent,
     Tool,
 )
+# Import ImageContent directly to avoid namespace conflicts
+from mcp.types import ImageContent as MCPImageContent
+
 from pydantic import BaseModel, ConfigDict
 from telethon import TelegramClient, custom, functions, types, events  # type: ignore[import-untyped]
 
@@ -35,10 +37,10 @@ logger = logging.getLogger(__name__)
 # 2. Implement the tool_runner function for the new class
 #    ```python
 #    @tool_runner.register
-#    async def new_tool(args: NewTool) -> t.Sequence[TextContent | ImageContent | EmbeddedResource]:
+#    async def new_tool(args: NewTool) -> t.Sequence[TextContent | MCPImageContent | EmbeddedResource]:
 #        pass
 #    ```
-#    The function should return a sequence of TextContent, ImageContent or EmbeddedResource.
+#    The function should return a sequence of TextContent, MCPImageContent or EmbeddedResource.
 #    The function should be async and accept a single argument of the new class.
 #
 # 3. Done! Restart the client and the new tool should be available.
@@ -51,7 +53,7 @@ class ToolArgs(BaseModel):
 @singledispatch
 async def tool_runner(
     args,  # noqa: ANN001
-) -> t.Sequence[TextContent | ImageContent | EmbeddedResource]:
+) -> t.Sequence[TextContent | MCPImageContent | EmbeddedResource]:
     raise NotImplementedError(f"Unsupported type: {type(args)}")
 
 
@@ -81,7 +83,7 @@ class ListDialogs(ToolArgs):
 @tool_runner.register
 async def list_dialogs(
     args: ListDialogs,
-) -> t.Sequence[TextContent | ImageContent | EmbeddedResource]:
+) -> t.Sequence[TextContent | MCPImageContent | EmbeddedResource]:
     client: TelegramClient
     logger.info("method[ListDialogs] args[%s]", args)
 
@@ -122,7 +124,7 @@ class ListMessages(ToolArgs):
 @tool_runner.register
 async def list_messages(
     args: ListMessages,
-) -> t.Sequence[TextContent | ImageContent | EmbeddedResource]:
+) -> t.Sequence[TextContent | MCPImageContent | EmbeddedResource]:
     client: TelegramClient
     logger.info("method[ListMessages] args[%s]", args)
 
@@ -179,11 +181,11 @@ class GetMessagesWithMedia(ToolArgs):
 @tool_runner.register
 async def get_messages_with_media(
     args: GetMessagesWithMedia,
-) -> t.Sequence[TextContent | ImageContent | EmbeddedResource]:
+) -> t.Sequence[TextContent | MCPImageContent | EmbeddedResource]:
     client: TelegramClient
     logger.info("method[GetMessagesWithMedia] args[%s]", args)
     
-    response: list[TextContent | ImageContent | EmbeddedResource] = []
+    response: list[TextContent | MCPImageContent | EmbeddedResource] = []
     async with create_client() as client:
         result = await client(functions.messages.GetPeerDialogsRequest(peers=[args.dialog_id]))
         if not result:
@@ -207,7 +209,7 @@ async def get_messages_with_media(
             logger.debug("message type: %s", type(message))
             
             # Create a list to store content for this message
-            message_contents: list[TextContent | ImageContent | EmbeddedResource] = []
+            message_contents: list[TextContent | MCPImageContent | EmbeddedResource] = []
             
             # Add text if available
             if message.text:
@@ -228,7 +230,7 @@ async def get_messages_with_media(
                     
                     # Create image content
                     message_contents.append(
-                        ImageContent(
+                        MCPImageContent(
                             type="image",
                             data=base64_data,
                             mimeType=mime_type
@@ -251,7 +253,7 @@ async def get_messages_with_media(
                         
                         # Create image content
                         message_contents.append(
-                            ImageContent(
+                            MCPImageContent(
                                 type="image",
                                 data=base64_data,
                                 mimeType=mime_type
@@ -315,7 +317,7 @@ async def get_messages_with_media(
                             
                             # Create image content for thumbnail
                             message_contents.append(
-                                ImageContent(
+                                MCPImageContent(
                                     type="image",
                                     data=base64_data,
                                     mimeType="image/jpeg"
@@ -384,11 +386,11 @@ class RequestUserMedia(ToolArgs):
 @tool_runner.register
 async def request_user_media(
     args: RequestUserMedia,
-) -> t.Sequence[TextContent | ImageContent | EmbeddedResource]:
+) -> t.Sequence[TextContent | MCPImageContent | EmbeddedResource]:
     client: TelegramClient
     logger.info("method[RequestUserMedia] args[%s]", args)
     
-    response: list[TextContent | ImageContent | EmbeddedResource] = []
+    response: list[TextContent | MCPImageContent | EmbeddedResource] = []
     async with create_client() as client:
         # Send the request message
         await client.send_message(args.dialog_id, args.message)
@@ -428,7 +430,7 @@ async def request_user_media(
                     
                     # Create image content
                     response.append(
-                        ImageContent(
+                        MCPImageContent(
                             type="image",
                             data=base64_data,
                             mimeType=mime_type
@@ -453,7 +455,7 @@ async def request_user_media(
                         
                         # Create image content
                         response.append(
-                            ImageContent(
+                            MCPImageContent(
                                 type="image",
                                 data=base64_data,
                                 mimeType=mime_type
@@ -518,7 +520,7 @@ async def request_user_media(
                             
                             # Create image content for thumbnail
                             response.append(
-                                ImageContent(
+                                MCPImageContent(
                                     type="image",
                                     data=base64_data,
                                     mimeType="image/jpeg"
@@ -598,7 +600,7 @@ class RequestUserPhotos(ToolArgs):
 @tool_runner.register
 async def request_user_photos(
     args: RequestUserPhotos,
-) -> t.Sequence[TextContent | ImageContent | EmbeddedResource]:
+) -> t.Sequence[TextContent | MCPImageContent | EmbeddedResource]:
     # Convert to RequestUserMedia and call that
     media_args = RequestUserMedia(
         dialog_id=args.dialog_id,
@@ -611,3 +613,33 @@ async def request_user_photos(
         max_media=args.max_photos
     )
     return await request_user_media(media_args)
+
+
+# Test function for debugging purposes
+async def test_image_content() -> None:
+    """Test function to verify ImageContent creation"""
+    try:
+        # Create test data
+        test_data = base64.b64encode(b"test image data").decode('utf-8')
+        
+        # Create an image content object using the correct class
+        image = MCPImageContent(type="image", data=test_data, mimeType="image/jpeg")
+        
+        # Verify that it works
+        logger.info("Test ImageContent creation successful: %s", image.model_dump())
+        
+        # This is how we should create ImageContent objects:
+        correct_way = """
+        message_contents.append(
+            MCPImageContent(
+                type="image",
+                data=base64_data,
+                mimeType=mime_type
+            )
+        )
+        """
+        logger.info("Correct way to create ImageContent: %s", correct_way)
+        
+    except Exception as e:
+        logger.error("Test ImageContent creation failed: %s", e)
+        raise

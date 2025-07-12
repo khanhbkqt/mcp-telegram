@@ -10,15 +10,19 @@ from functools import cache
 from mcp.server import Server
 from mcp.types import (
     EmbeddedResource,
-    ImageContent,
+    TextContent,
+    Tool,
     Prompt,
     Resource,
     ResourceTemplate,
-    TextContent,
-    Tool,
 )
+# Import ImageContent directly to avoid namespace conflicts
+from mcp.types import ImageContent
 
 from . import tools
+
+# Define the content types that can be returned from a tool
+ContentType = t.Union[TextContent, ImageContent, EmbeddedResource]
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
@@ -67,7 +71,7 @@ async def progress_notification(pogress: str | int, p: float, s: float | None) -
 
 
 @app.call_tool()
-async def call_tool(name: str, arguments: t.Any) -> Sequence[TextContent | ImageContent | EmbeddedResource]:  # noqa: ANN401
+async def call_tool(name: str, arguments: t.Any) -> Sequence[ContentType]:  # noqa: ANN401
     """Handle tool calls for command line run."""
 
     if not isinstance(arguments, dict):

@@ -3,57 +3,75 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
-from functools import wraps
+import sys
+from typing import Any, Dict, List, Optional
 
 import typer
 from rich.console import Console
-from rich.json import JSON
-from rich.table import Table
+from rich.logging import RichHandler
+from rich.pretty import pprint
 
-from mcp_telegram import server
+from mcp_telegram.tools import enumerate_available_tools, tool_args, tool_runner, test_image_content
 
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(
+    level=logging.DEBUG,
+    format="%(message)s",
+    datefmt="[%X]",
+    handlers=[RichHandler(rich_tracebacks=True)],
+)
+logger = logging.getLogger(__name__)
+
 app = typer.Typer()
 
 
-def typer_async(f):  # noqa: ANN001, ANN201
-    @wraps(f)
-    def wrapper(*args, **kwargs):  # noqa: ANN002, ANN003, ANN202
-        return asyncio.run(f(*args, **kwargs))
-
-    return wrapper
-
-
-@app.command()
-@typer_async
-async def list_tools() -> None:
-    """List available tools."""
-
+@app.command(name="list-tools")
+def list_tools() -> None:
     console = Console()
-
-    # Create a table
-    table = Table(title="Available Tools")
-
-    # Add three columns
-    table.add_column("Name", style="cyan")
-    table.add_column("Description", style="magenta")
-    table.add_column("Schema", style="green")
-    for tool in await server.list_tools():
-        json_data = json.dumps(tool.inputSchema["properties"])
-        table.add_row(tool.name, tool.description, JSON(json_data))
-
-    console.print(table)
+    tools = list(enumerate_available_tools())
+    pprint(tools)
 
 
-@app.command()
-@typer_async
-async def call_tool(
-    name: str = typer.Option(help="Name of the tool"),
-    arguments: str = typer.Option(help="Arguments for the tool as JSON string"),
+@app.command(name="call-tool")
+def call_tool_command(
+    name: str,
+    arguments: Optional[str] = None,
 ) -> None:
-    """Handle tool calls for command line run."""
-    for response in await server.call_tool(name, json.loads(arguments)):
-        typer.echo(response)
+    console = Console()
+    tools = dict(enumerate_available_tools())
+    tool = tools.get(name)
+
+    if not tool:
+        available_tools = ", ".join(tools.keys())
+        console.print(f"Tool {name} not found. Available tools: {available_tools}")
+        sys.exit(1)
+
+    if arguments:
+        try:
+            arguments_dict = json.loads(arguments)
+        except json.JSONDecodeError as e:
+            console.print(f"Error parsing arguments: {e}")
+            sys.exit(1)
+    else:
+        arguments_dict = {}
+
+    try:
+        args = tool_args(tool, **arguments_dict)
+        result = asyncio.run(tool_runner(args))
+        pprint(result)
+    except Exception as e:
+        logger.exception("Error calling tool: %s", e)
+        sys.exit(1)
+
+
+@app.command(name="test-image")
+def test_image() -> None:
+    """Test the ImageContent creation to verify it works correctly"""
+    try:
+        asyncio.run(test_image_content())
+        print("Test successful!")
+    except Exception as e:
+        logger.exception("Test failed: %s", e)
+        sys.exit(1)
 
 
 if __name__ == "__main__":
